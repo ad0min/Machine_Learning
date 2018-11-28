@@ -1,12 +1,14 @@
 import numpy as np 
-from util import batch_iterator
+from src.util import batch_iterator
+from src.optimizers import Adam
 
 class NeuralNetwork:
     
-    def __init__(self, loss_function, validation_data=None):
+    def __init__(self, loss_function, optimizer = Adam(), validation_data=None):
         self.layers = []
         self.errors = {"training": [], "validation": []}
         self.loss_function = loss_function 
+        self.optimizer = optimizer
 
         self.val_set = None
         # if validation_data:
@@ -19,11 +21,11 @@ class NeuralNetwork:
             layer.set_input_shape(shape=self.layers[-1].output_shape())
 
         if hasattr(layer, 'initialize'):
-            layer.initialize()
+            layer.initialize(self.optimizer)
 
         self.layers.append(layer)
 
-    def fit(self, X, y, n_epochs, batch_size ):
+    def fit(self, X, y, n_epochs, batch_size):
         for _ in range(n_epochs):
             batch_error = []
             for X_batch, y_batch in batch_iterator(X, y, batch_size = batch_size):

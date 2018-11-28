@@ -2,10 +2,10 @@ import numpy as np
 from sklearn.datasets import fetch_mldata
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
-from neural_network import NeuralNetwork
-from util import to_categorical
-from loss_function import SquareLoss
-from layers import Conv2D, Dense, Dropout, Activation, Flatten
+from src.neural_network import NeuralNetwork
+from src.util import to_categorical
+from src.loss_function import SquareLoss
+from src.layers import Conv2D, Dense, Dropout, Activation, Flatten
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
 

@@ -1,5 +1,5 @@
 import numpy as np
-from activation_function import ReLU, Sigmoid, TanH, Softmax
+from src.activation_function import ReLU, Sigmoid, TanH, Softmax
 import math
 
 class Layer(object):
@@ -27,7 +27,7 @@ class Conv2D(Layer):
 		self.padding = padding
 		self.stride = stride 
 
-	def initialize(self):
+	def initialize(self, optimizer = None):
 		filter_height, filter_width = self.filter_shape
 		channels = self.input_shape[0]
 		self.W = np.random.normal(0, 0.001, size = (self.n_filters, channels, filter_height, filter_width))
@@ -62,36 +62,6 @@ class Conv2D(Layer):
 		output_height = (height + np.sum(pad_h) - self.filter_shape[0]) / self.stride + 1
 		output_width = (width + np.sum(pad_w) - self.filter_shape[1]) / self.stride + 1
 		return self.n_filters, int(output_height), int(output_width)
-
-
-activation_functions = {
-    'relu': ReLU,
-    'sigmoid': Sigmoid,
-    'softmax': Softmax,
-    'tanh': TanH,
-}
-
-class Activation(Layer):
-
-    def __init__(self, name):
-        self.activation_name = name
-        self.activation_func = activation_functions[name]()
-        self.trainable = True
-
-    def layer_name(self):
-        return "Activation (%s)" % (self.activation_func.__class__.__name__)
-
-    def forward_pass(self, X, training=True):
-        # print("forward: Activate", self.activation_name, X.shape)
-        self.layer_input = X
-        return self.activation_func(X)
-
-    def backward_pass(self, accum_grad):
-        # print("backward: Activate", self.activation_name, self.layer_input.shape, accum_grad.shape)
-        return accum_grad * self.activation_func.gradient(self.layer_input)
-
-    def output_shape(self):
-        return self.input_shape
 
 
 def determine_padding(filter_shape, output_shape="same"):
@@ -212,9 +182,11 @@ class Dense(Layer):
         self.trainable = True
         self.learning_rate = learning_rate
 
-    def initialize(self):
+    def initialize(self, optimizer = None):
         self.W = np.random.uniform(size = (self.input_shape[0], self.n_units))
         self.bias = np.zeros((1,self.n_units))
+        self.opt_W = optimizer()
+        self.opt_bias = optimizer()
 
     def forward_pass(self, X, training = True):
         self.layer_input = X 
@@ -227,9 +199,11 @@ class Dense(Layer):
             # print("backward: dense", self.layer_input.shape, accum_grad.shape)
             grad_W = np.dot(self.layer_input.T, accum_grad)
             grad_bias = np.sum(accum_grad, axis= 0, keepdims= True)
+            self.W = self.opt_W.update(self.W, grad_W)
+            self.bias = self.opt_bias.update(self.bias, grad_bias)
 
-            self.W -= grad_W * self.learning_rate
-            self.bias -= grad_bias * self.learning_rate
+            # self.W -= grad_W * self.learning_rate
+            # self.bias -= grad_bias * self.learning_rate
         return np.dot(accum_grad, W.T)
 
     def output_shape(self):
@@ -248,3 +222,33 @@ class Flatten(Layer): #TODO: check input_shape vs pred_shape
 
     def output_shape(self):
         return (np.prod(self.input_shape),)
+
+
+activation_functions = {
+    'relu': ReLU,
+    'sigmoid': Sigmoid,
+    'softmax': Softmax,
+    'tanh': TanH,
+}
+
+class Activation(Layer):
+
+    def __init__(self, name):
+        self.activation_name = name
+        self.activation_func = activation_functions[name]()
+        self.trainable = True
+
+    def layer_name(self):
+        return "Activation (%s)" % (self.activation_func.__class__.__name__)
+
+    def forward_pass(self, X, training=True):
+        # print("forward: Activate", self.activation_name, X.shape)
+        self.layer_input = X
+        return self.activation_func(X)
+
+    def backward_pass(self, accum_grad):
+        # print("backward: Activate", self.activation_name, self.layer_input.shape, accum_grad.shape)
+        return accum_grad * self.activation_func.gradient(self.layer_input)
+
+    def output_shape(self):
+        return self.input_shape
